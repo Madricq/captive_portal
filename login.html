@@ -220,7 +220,119 @@
       return false;
     }
 
+    // ============ Captive portal customization (per router/admin) ============
+    async function applyCustomizationFromServer() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const routerId = params.get('routerId');
+
+        if (!routerId) return; // no customization possible without routerId
+
+        // If admin passes a custom API base, use it. Otherwise fall back to this origin.
+        // Admin dashboard should inject either `apiBase` or rely on same-origin.
+        const apiBase = (params.get('apiBase') || '').replace(/\/$/, '');
+        const url = `${apiBase || ''}/api/captive-portal/public/${encodeURIComponent(routerId)}`;
+
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return;
+        const settings = await res.json();
+
+        const portal = settings.captivePortal || {};
+        const branding = portal.branding || {};
+        const colors = portal.colors || {};
+        const fonts = portal.fonts || {};
+
+        // Apply CSS variables
+        document.documentElement.style.setProperty('--cp-primary', colors.primary || '#2563eb');
+        document.documentElement.style.setProperty('--cp-secondary', colors.secondary || '#64748b');
+        document.documentElement.style.setProperty('--cp-accent', colors.accent || '#f59e0b');
+        document.documentElement.style.setProperty('--cp-background', colors.background || '#ffffff');
+        document.documentElement.style.setProperty('--cp-heading-font', fonts.heading || 'Arial');
+        document.documentElement.style.setProperty('--cp-body-font', fonts.body || 'Arial');
+
+        // Update text content
+        const titleEl = document.querySelector('h1');
+        if (titleEl && branding.businessName) titleEl.textContent = branding.businessName;
+
+        const bannerMsg = document.querySelector('.instructions > div > strong');
+        if (bannerMsg && branding.bannerMessage) bannerMsg.textContent = branding.bannerMessage;
+
+        // Update banner area fallback (if strong not found)
+        const fallbackBanner = document.querySelector('.instructions > div');
+        if (fallbackBanner && branding.bannerMessage && !bannerMsg) {
+          fallbackBanner.textContent = `✅ ${branding.bannerMessage} ✅`;
+        }
+
+
+        // Update footer branding (keep powered-by label, allow optional override)
+        const footerSpan = document.querySelector('footer span');
+        if (footerSpan && branding.businessName) footerSpan.textContent = branding.businessName;
+
+        // Apply images
+        // Banner image (replace the existing box if we find a container)
+        const instructionsBox = document.querySelector('.instructions > div');
+        if (instructionsBox && branding.bannerImage) {
+          const img = document.createElement('img');
+          img.src = branding.bannerImage;
+          img.alt = 'Banner';
+          img.style.width = '100%';
+          img.style.borderRadius = '8px';
+          img.style.marginBottom = '10px';
+          instructionsBox.prepend(img);
+        }
+
+        // Logo (if there is a natural place - otherwise set document title icon only)
+        if (branding.logo) {
+          const link = document.querySelector('link[rel="icon"]') || document.createElement('link');
+          link.rel = 'icon';
+          link.type = 'image/png';
+          link.href = branding.logo;
+          if (!link.parentNode) document.head.appendChild(link);
+        }
+
+        // Update purchase instructions list (ul#glowSteps)
+        const ul = document.getElementById('glowSteps');
+        if (ul && Array.isArray(settings.purchaseInstructions)) {
+          ul.innerHTML = '';
+          settings.purchaseInstructions
+            .slice()
+            .sort((a, b) => (a.stepNumber || 0) - (b.stepNumber || 0))
+            .forEach((instr) => {
+              const li = document.createElement('li');
+              li.textContent = instr.instructionText || '';
+              ul.appendChild(li);
+            });
+          // re-run glow effect by toggling classes
+        }
+
+        // Apply colors to existing elements
+        const glowSteps = document.getElementById('glowSteps');
+        if (glowSteps) {
+          // ensure list uses accent for glow; original uses inline orange/green/blue, keep behavior
+          // but we can adjust strongly styled elements
+        }
+
+        const connectBtn = document.querySelector('.btn-primary');
+        if (connectBtn) {
+          connectBtn.style.backgroundColor = 'var(--cp-primary)';
+        }
+
+        const buyBtns = document.querySelectorAll('.btn-buy');
+        buyBtns.forEach((b) => {
+          b.style.backgroundColor = 'var(--cp-primary)';
+        });
+
+        document.body.style.background = 'linear-gradient(135deg, var(--cp-background), #cfcaca)';
+      } catch (e) {
+        // ignore customization errors to not break portal
+        console.warn('Captive portal customization failed:', e?.message || e);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', applyCustomizationFromServer);
+
     let progress = 0;
+
     const progressBar = document.getElementById('progressBar');
     const splash = document.getElementById('splash');
     const mainContent = document.getElementById('mainContent');
@@ -313,8 +425,9 @@ async function pay() {
   }
 }
 
-// Poll backend for voucher assignment<script>
+// Poll backend for voucher assignment
 async function pay() {
+
   const phone = document.getElementById('phoneInput').value.trim();
   const modalMessage = document.getElementById('modalMessage');
   const payBtn = document.getElementById('payBtn');
@@ -511,11 +624,6 @@ async function pollVoucher(externalId, timeout = 120000, interval = 5000) {
 }
 
 </script>
-
-
-</script>
-
-
-  </script>
 </body>
 </html>
+

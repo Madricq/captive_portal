@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="pragma" content="no-cache" />
+  <meta http-equiv="expires" content="-1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kasangati Open WiFi</title>
+  <link rel="stylesheet" href="App.css" />
+  <script src="/md5.js"></script>
+  <style>
+    /* Loader styles */
+    #splash {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .spinner {
+      border: 8px solid #eee;
+      border-top: 8px solid #3498db;
+      border-radius: 50%;
+      width: 80px;
+      height: 80px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 30px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .progress-container {
+      width: 300px;
+      background: #eee;
+      border-radius: 20px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .progress-bar {
+      height: 20px;
+      width: 0%;
+      background: #3498db;
+      transition: width 0.2s;
+    }
+    .loading-text {
+      font-size: 1.2em;
+      color: #555;
+      margin-bottom: 10px;
+    }
+
+    #mainContent {
+      display: none;
+    }
+    button[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Splash loading screen -->
+  <div id="splash">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading Packages... ⏳</div>
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+  </div>
+
+  <!-- Main page content -->
+  <div id="mainContent" class="container">
+    <h1>Kasangati Open WiFi</h1>
+    <div class="instructions">
+      <h2>How to Connect <span id="autoType" style="font-weight:bold;"></span></h2>
+      <div style="background: #f0f8ff; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 1.1em;">
+        ✅ <strong>Fast WiFi,Affordable,Easy Pay</strong> ✅
+      </div>
+      <ul id="glowSteps" style="list-style:none; padding-left:0;">
+        <li>🛒 Buy voucher at shop <b>or</b> pay with Mobile Money</li>
+        <li>📦 Pick your package</li>
+        <li>📱 Enter Your Number & Press Pay button</li>
+        <li>⏳ Wait for Wait seconds</li>
+        <li>📩 You'll be given  voucher code via SMS</li>
+        <li>🚀 Tap Connect button</li>
+      </ul>
+      <p class="help">📞 <a href="tel:0785151142">Need Help? 0785151142</a></p>
+    </div>
+    <style>
+      .glow {
+        animation: glow 1s infinite alternate;
+      }
+      @keyframes glow {
+        from { text-shadow: 0 0 10px var(--glow-color, orange), 0 0 20px var(--glow-color, orange); }
+        to { text-shadow: 0 0 20px var(--glow-color, orange), 0 0 40px var(--glow-color, orange); }
+      }
+    </style>
+    <script>
+      // Enhanced autotype effect for multiple messages with smooth transitions
+      document.addEventListener('DOMContentLoaded', function() {
+        // Autotype
+        const messages = [
+          '✅ Welcome User!',
+          '💳 Use Mobile Money',
+          '🛒 Buy Voucher',
+          '🚀 Connect & Enjoy WiFi!'
+        ];
+        const el = document.getElementById('autoType');
+        let msgIdx = 0;
+        let charIdx = 0;
+        function typeMessage() {
+          if (!el) return;
+          if (charIdx <= messages[msgIdx].length) {
+            el.textContent = messages[msgIdx].slice(0, charIdx);
+            charIdx++;
+            setTimeout(typeMessage, 70);
+          } else {
+            setTimeout(() => {
+              charIdx = 0;
+              msgIdx = (msgIdx + 1) % messages.length;
+              el.textContent = '';
+              setTimeout(typeMessage, 400);
+            }, 1200);
+          }
+        }
+        typeMessage();
+
+        // Glow steps effect
+        const colors = ['orange', 'green', 'blue'];
+        const steps = document.querySelectorAll('#glowSteps li');
+        let glowIdx = 0;
+        function glowStep() {
+          steps.forEach((li, i) => {
+            li.classList.remove('glow');
+            li.style.setProperty('--glow-color', '');
+          });
+          if (glowIdx < steps.length * colors.length) {
+            const step = Math.floor(glowIdx / colors.length);
+            const color = colors[glowIdx % colors.length];
+            steps[step].classList.add('glow');
+            steps[step].style.setProperty('--glow-color', color);
+            glowIdx++;
+            setTimeout(glowStep, 600);
+          } else {
+            steps.forEach(li => { li.classList.remove('glow'); li.style.setProperty('--glow-color', ''); });
+          }
+        }
+        glowStep();
+      });
+    </script>
+
+    <h2>Login / Activate Package 🔑</h2>
+    <form id="loginForm" action="$(link-login-only)" method="post" onsubmit="return mikrotikDoChapLogin()">
+      <input type="hidden" name="dst" value="$(link-orig)" />
+      <input type="hidden" name="popup" value="true" />
+      <input name="username" type="hidden" />
+      <input name="password" type="text" placeholder="Voucher" required />
+      <button type="submit" class="btn-primary">Connect</button>
+    </form>
+
+    <h2>Buy A Package 💳</h2>
+    <div class="packages">
+      <div class="package-row">
+        <span>2hrs UGX 500 💵</span>
+        <button class="btn-buy" onclick="showModal('2hrs UGX 500 💵', 500)">Buy</button>
+      </div>
+      <div class="package-row">
+        <span>24hrs UGX 1,000 💵</span>
+        <button class="btn-buy" onclick="showModal('Daily UGX 1,000 💵', 1000)">Buy</button>
+      </div>
+      <div class="package-row">
+        <span>2-Days UGX 2,000 💵</span>
+        <button class="btn-buy" onclick="showModal('2-Days UGX 2,000 💵', 2000)">Buy</button>
+      </div>
+      <div class="package-row">
+        <span>3-Days UGX 3,000 💵</span>
+        <button class="btn-buy" onclick="showModal('3-Days UGX 3,000 💵', 3000)">Buy</button>
+      </div>
+      <div class="package-row">
+        <span>Week UGX 5,000 💵</span>
+        <button class="btn-buy" onclick="showModal('Week UGX 5,000 💵', 5000)">Buy</button>
+      </div>
+    </div>
+
+    <b><footer>Powered by <span>Madri'kDevInc</span></footer></b>
+  </div>
+
+  <!-- Payment Modal -->
+  <div id="paymentModal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h3 id="modalPackage">Selected Package</h3>
+      <input type="text" id="phoneInput" placeholder="Enter Mobile Money Number" />
+      <button id="payBtn" class="btn-primary" onclick="pay()">Pay 💳</button>
+      <div id="modalMessage" class="modal-message"></div>
+    </div>
+  </div>
+
+  <form name="sendin" action="$(link-login-only)" method="post" style="display:none;">
+    <input type="hidden" name="username" />
+    <input type="hidden" name="password" />
+    <input type="hidden" name="dst" value="$(link-orig)" />
+    <input type="hidden" name="popup" value="true" />
+  </form>
+
+  <script>
+    function mikrotikDoChapLogin() {
+      const pass = document.querySelector('input[name="password"]').value;
+      if (!pass) {
+        alert('Please enter voucher code');
+        return false;
+      }
+      document.sendin.username.value = pass;
+      document.sendin.password.value = hexMD5('$(chap-id)' + pass + '$(chap-challenge)');
+      document.sendin.submit();
+      return false;
+    }
+
+    let progress = 0;
+    const progressBar = document.getElementById('progressBar');
+    const splash = document.getElementById('splash');
+    const mainContent = document.getElementById('mainContent');
+
+    const interval = setInterval(() => {
+      progress += Math.random() * 10 + 5;
+      if (progress > 100) progress = 100;
+      progressBar.style.width = progress + '%';
+      if (progress >= 100) {
+        clearInterval(interval);
+        splash.style.display = 'none';
+        mainContent.style.display = 'block';
+      }
+    }, 200);
+
+    let selectedPackage = '';
+    let selectedAmount = 0;
+
+    function showModal(name, amount) {
+      selectedPackage = name;
+      selectedAmount = amount;
+      document.getElementById('modalPackage').textContent = `Selected Package: ${name}`;
+      document.getElementById('phoneInput').value = '';
+      document.getElementById('modalMessage').textContent = '';
+      document.getElementById('paymentModal').classList.remove('hidden');
+      document.getElementById('payBtn').disabled = false; // enable Pay
+    }
+
+    function closeModal() {
+      document.getElementById('paymentModal').classList.add('hidden');
+    }
+async function pay() {
+  const phone = document.getElementById('phoneInput').value.trim();
+  const modalMessage = document.getElementById('modalMessage');
+  const payBtn = document.getElementById('payBtn');
+
+  if (!/^0\d{9}$/.test(phone)) {
+    alert('📱 Enter a valid Mobile Money number.');
+    return;
+  }
+
+  payBtn.disabled = true;
+  modalMessage.textContent = '⏳ Processing payment... Please approve on your phone.';
+  modalMessage.style.color = 'black';
+
+  try {
+    const res = await fetch('https://payment-engine-logic.onrender.com/collect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phoneNumber: phone,
+        amount: selectedAmount
+      })
+    });
+
+    const data = await res.json();
+    console.log('💬 API Response:', data); // Debug
+
+    if (data.success && data.externalId) {
+      modalMessage.textContent = '✅ Payment initiated. Waiting for confirmation...';
+
+      // Start polling for voucher assignment
+      const voucher = await pollVoucher(data.externalId);
+
+      if (voucher && voucher.code) {
+        modalMessage.style.color = 'green';
+        modalMessage.textContent = `🎉 Payment successful! Voucher: ${voucher.code}`;
+
+        // ✅ Auto-fill username & password with voucher code and submit
+        if (document.sendin) {
+          document.sendin.username.value = voucher.code;
+          document.sendin.password.value = voucher.code;
+          document.sendin.submit();
+        }
+      } else {
+        modalMessage.style.color = 'orange';
+        modalMessage.textContent = '⚠️ Payment processed, but voucher not yet available. Please try again later.';
+        payBtn.disabled = false;
+      }
+    } else {
+      modalMessage.style.color = 'red';
+      modalMessage.textContent = data.message || '❌ Payment failed. Please try again.';
+      payBtn.disabled = false;
+    }
+  } catch (err) {
+    console.error('❌ Fetch error:', err);
+    modalMessage.style.color = 'red';
+    modalMessage.textContent = '❌ Network error. Check your connection and try again.';
+    payBtn.disabled = false;
+  }
+}
+
+// Poll backend for voucher assignment<script>
+async function pay() {
+  const phone = document.getElementById('phoneInput').value.trim();
+  const modalMessage = document.getElementById('modalMessage');
+  const payBtn = document.getElementById('payBtn');
+
+async function pay() {
+  const phoneInput = document.getElementById('phoneInput');
+  const modalMessage = document.getElementById('modalMessage');
+  const payBtn = document.getElementById('payBtn');
+
+  // Normalize phone number: remove spaces, convert +256 prefix to 0
+  let phone = phoneInput.value.trim().replace(/\s+/g, '').replace(/^(\+256)/, '0');
+
+  if (!/^0\d{9}$/.test(phone)) {
+    alert('📱 Enter a valid Mobile Money number (e.g. 0759763795)');
+    return;
+  }
+
+  payBtn.disabled = true;
+  modalMessage.textContent = '⏳ Processing payment... Please approve on your phone.';
+  modalMessage.style.color = 'black';
+
+  try {
+    const res = await fetch('https://payment-engine-logic.onrender.com/collect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phoneNumber: phone,
+        amount: selectedAmount,
+        tenantId: "686ec0ba5af4c33113677684" // <-- Hardcoded tenantId here
+      })
+    });
+
+    const data = await res.json();
+    console.log('💬 API Response:', data);
+
+    if (data.success && data.externalId) {
+      modalMessage.textContent = '✅ Payment initiated. Waiting for confirmation...';
+
+      const voucher = await listenForVoucher(data.externalId);
+
+      if (voucher && voucher.code) {
+        modalMessage.style.color = 'green';
+        modalMessage.textContent = `🎉 Payment successful! Voucher: ${voucher.code}`;
+
+        if (document.sendin) {
+          document.sendin.username.value = voucher.code;
+          document.sendin.password.value = voucher.code;
+          document.sendin.submit();
+        }
+      } else {
+        modalMessage.style.color = 'orange';
+        modalMessage.textContent = '⚠️ Payment processed, but voucher not yet available. Please try again later.';
+        payBtn.disabled = false;
+      }
+    } else {
+      modalMessage.style.color = 'red';
+      modalMessage.textContent = data.message || '❌ Payment failed. Please try again.';
+      payBtn.disabled = false;
+    }
+  } catch (err) {
+    console.error('❌ Fetch error:', err);
+    modalMessage.style.color = 'red';
+    modalMessage.textContent = '❌ Network error. Check your connection and try again.';
+    payBtn.disabled = false;
+  }
+}
+
+  payBtn.disabled = true;
+  modalMessage.textContent = '⏳ Processing payment... Please approve on your phone.';
+  modalMessage.style.color = 'black';
+
+  try {
+    const res = await fetch('https://payment-engine-logic.onrender.com/collect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phoneNumber: phone,
+        amount: selectedAmount,
+        tenantId: "686ec0ba5af4c33113677684" // 🔥 Hardcoded tenant ID
+      })
+    });
+
+    const data = await res.json();
+    console.log('💬 API Response:', data); // Debug
+
+    if (data.success && data.externalId) {
+      modalMessage.textContent = '✅ Payment initiated. Waiting for confirmation...';
+      const voucher = await pollVoucher(data.externalId);
+
+      if (voucher && voucher.code) {
+        modalMessage.style.color = 'green';
+        modalMessage.textContent = `🎉 Payment successful! Voucher: ${voucher.code}`;
+        if (document.sendin) {
+          document.sendin.username.value = voucher.code;
+          document.sendin.password.value = voucher.code;
+          document.sendin.submit();
+        }
+      } else {
+        modalMessage.style.color = 'orange';
+        modalMessage.textContent = '⚠️ Payment processed, but voucher not yet available. Please try again later.';
+        payBtn.disabled = false;
+      }
+    } else {
+      modalMessage.style.color = 'red';
+      modalMessage.textContent = data.message || '❌ Payment failed. Please try again.';
+      payBtn.disabled = false;
+    }
+  } catch (err) {
+    console.error('❌ Fetch error:', err);
+    modalMessage.style.color = 'red';
+    modalMessage.textContent = '❌ Network error. Check your connection and try again.';
+    payBtn.disabled = false;
+  }
+}
+
+async function listenForVoucher(externalId, timeout = 180000) { // 3 min timeout
+  const modalMessage = document.getElementById('modalMessage');
+  return new Promise((resolve) => {
+    let resolved = false;
+
+    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = location.host;
+    const ws = new WebSocket(`${wsProtocol}//${wsHost}/?externalId=${externalId}`);
+
+    ws.onopen = () => {
+      console.log('🟢 WebSocket connected');
+      modalMessage.textContent = '📡 Waiting for confirmation from server...';
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log('📨 WebSocket message:', data);
+
+      if (data.type === 'voucherAssigned' && data.externalId === externalId) {
+        ws.close();
+        resolved = true;
+        resolve(data.voucher);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.error('🔴 WebSocket error:', err);
+      modalMessage.textContent = '⚠️ WebSocket error. Will fallback to polling...';
+    };
+
+    ws.onclose = () => {
+      if (!resolved) {
+        console.warn('🔌 WebSocket closed without voucher, fallback to polling');
+        resolve(pollVoucher(externalId, timeout));
+      }
+    };
+
+    // Timeout safeguard
+    setTimeout(() => {
+      if (!resolved) {
+        console.warn('⏱️ WebSocket timeout, fallback to polling');
+        ws.close();
+        resolve(pollVoucher(externalId, timeout));
+      }
+    }, timeout);
+  });
+}
+
+async function pollVoucher(externalId, timeout = 120000, interval = 5000) {
+  const modalMessage = document.getElementById('modalMessage');
+  let endTime = Date.now() + timeout;
+
+  const timer = setInterval(() => {
+    const remaining = Math.max(0, endTime - Date.now());
+    const minutes = Math.floor(remaining / 60000);
+    const seconds = Math.floor((remaining % 60000) / 1000);
+    modalMessage.textContent = `⏳ Waiting... ${minutes}:${seconds.toString().padStart(2, '0')} remaining`;
+  }, 1000);
+
+  while (Date.now() < endTime) {
+    try {
+      const res = await fetch(`https://payment-engine-logic.onrender.com/api/voucher/status?externalId=${externalId}`, {
+        cache: 'no-store'
+      });
+      const data = await res.json();
+
+      if (data.success && data.voucher) {
+        clearInterval(timer);
+        return data.voucher;
+      }
+    } catch (err) {
+      console.error('⚠️ Polling error:', err);
+    }
+    await new Promise(r => setTimeout(r, interval));
+  }
+
+  clearInterval(timer);
+  return null;
+}
+
+</script>
+
+
+</script>
+
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+/* Base Background */
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #d4d2d2, #cfcaca);
+  color: #333;
+  line-height: 1.6;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 30px 15px;
+}
+
+.container {
+  max-width: 500px;
+  width: 100%;
+  background: #fff;
+  padding: 25px 20px;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+/* Headings */
+h1 {
+  color: #171718; ; /* Deep navy */
+  margin-bottom: 10px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+h2 {
+  margin-top: 20px;
+  margin-bottom: 15px;
+  font-size: 22px;
+  color: #44aef5; ;
+  font-weight: 600;
+}
+
+/* Packages Grid */
+.packages {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.package-row {
+  background: #c9c6c6;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  transition: transform 0.2s, box-shadow 0.3s;
+}
+
+.package-row:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.package-row span {
+  font-size: 17px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Buy Button */
+.btn-buy {
+  background-color: #44aef5; /* Navy Blue */
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.btn-buy:hover {
+  background-color: #0d164d;
+  transform: scale(1.05);
+}
+/* Fancy Modern Login Form Styling */
+#loginForm {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  padding: 25px;
+  max-width: 400px;
+  margin: 40px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  animation: fadeIn 0.8s ease forwards;
+}
+
+#loginForm input[type="text"],
+#loginForm input[type="password"] {
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  font-size: 16px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#loginForm input[type="text"]:focus,
+#loginForm input[type="password"]:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+  outline: none;
+}
+
+#loginForm .btn-primary {
+  background: linear-gradient(135deg, #4f46e5, #3b82f6);
+  color: #fff;
+  font-size: 16px;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#loginForm .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+}
+
+#loginForm .btn-primary:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/*span*/
+span {
+  font-weight: bold;
+  color: #44aef5; /* Navy Blue */
+}
+/* Footer */
+footer {
+  margin-top: 30px;
+  font-size: 13px;
+  color: #888;
+  text-align: center;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: #ffffff;
+  padding: 20px 25px;
+  border-radius: 10px;
+  max-width: 400px;
+  height: 170px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  animation: popUp 0.3s ease-out forwards;
+}
+
+@keyframes popUp {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modal-content h3 {
+  margin-bottom: 12px;
+  font-size: 20px;
+  color: #1a237e;
+  font-weight: 600;
+}
+
+.modal-content input[type="text"] {
+  margin-top: 10px;
+}
+
+.modal-content .btn-primary {
+  margin-top: 15px;
+}
+
+.close {
+  position: absolute;
+  top: 10px; right: 15px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #aaa;
+}
+
+.close:hover {
+  color: #333;
+}
+
+.modal-message {
+  margin-top: 10px;
+  color: red;
+  font-size: 14px;
+}
+.modal-message.success {
+  color: green;
+}

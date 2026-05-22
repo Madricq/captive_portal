@@ -5,14 +5,34 @@
   <meta http-equiv="pragma" content="no-cache" />
   <meta http-equiv="expires" content="-1" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kasangati Open WiFi</title>
-  <link rel="stylesheet" href="App.css" />
+  <title>WiFi Login</title>
+
+  <!-- md5.js must exist at /md5.js on the MikroTik hotspot server -->
   <script src="/md5.js"></script>
+
   <style>
-    /* Loader styles */
+    /* ── CSS variables — overridden at runtime by applyCustomization() ── */
+    :root {
+      --cp-primary:      #2563eb;
+      --cp-secondary:    #64748b;
+      --cp-accent:       #f59e0b;
+      --cp-background:   #ffffff;
+      --cp-heading-font: Arial, sans-serif;
+      --cp-body-font:    Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--cp-body-font);
+      background: linear-gradient(135deg, var(--cp-background), #d0d0d0);
+      min-height: 100vh;
+    }
+
+    /* ── Splash loader ── */
     #splash {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
+      inset: 0;
       background: #fff;
       display: flex;
       flex-direction: column;
@@ -22,184 +42,287 @@
     }
     .spinner {
       border: 8px solid #eee;
-      border-top: 8px solid #3498db;
+      border-top: 8px solid var(--cp-primary);
       border-radius: 50%;
-      width: 80px;
-      height: 80px;
-      animation: spin 1s linear infinite;
-      margin-bottom: 30px;
+      width: 72px; height: 72px;
+      animation: spin 0.9s linear infinite;
+      margin-bottom: 24px;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .progress-container {
-      width: 300px;
-      background: #eee;
-      border-radius: 20px;
-      overflow: hidden;
-      margin-bottom: 20px;
+      width: 280px; background: #eee;
+      border-radius: 20px; overflow: hidden; margin-bottom: 16px;
     }
     .progress-bar {
-      height: 20px;
-      width: 0%;
-      background: #3498db;
-      transition: width 0.2s;
+      height: 16px; width: 0%;
+      background: var(--cp-primary);
+      transition: width 0.2s ease;
+      border-radius: 20px;
     }
-    .loading-text {
-      font-size: 1.2em;
-      color: #555;
-      margin-bottom: 10px;
+    .loading-text { font-size: 1.1em; color: #555; }
+
+    /* ── Main content ── */
+    #mainContent { display: none; }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
     }
 
-    #mainContent {
+    /* Header */
+    .portal-header {
+      text-align: center;
+      padding: 24px 16px 16px;
+    }
+    .portal-header #portalLogo {
+      width: 72px; height: 72px;
+      object-fit: contain;
+      border-radius: 50%;
+      margin-bottom: 10px;
+      display: none; /* shown when logo URL is set */
+    }
+    .portal-header h1 {
+      font-family: var(--cp-heading-font);
+      font-size: 1.6em;
+      color: var(--cp-primary);
+    }
+
+    /* Banner */
+    #portalBanner {
+      background: linear-gradient(135deg, var(--cp-primary), var(--cp-accent));
+      color: #fff;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 18px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 1.05em;
+      position: relative;
+      overflow: hidden;
+    }
+    #portalBannerImg {
+      width: 100%; border-radius: 10px;
+      margin-bottom: 8px;
       display: none;
     }
-    button[disabled] {
-      opacity: 0.6;
-      cursor: not-allowed;
+
+    /* Cards */
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    .card h2 {
+      font-family: var(--cp-heading-font);
+      font-size: 1.1em;
+      color: var(--cp-primary);
+      margin-bottom: 14px;
+    }
+
+    /* Autotype heading */
+    #autoTypeWrap { font-size: 0.95em; color: var(--cp-secondary); margin-bottom: 12px; }
+    #autoType { font-weight: bold; color: var(--cp-accent); }
+
+    /* Steps */
+    #glowSteps { list-style: none; padding: 0; margin: 0 0 10px; }
+    #glowSteps li {
+      padding: 5px 0;
+      font-size: 0.95em;
+      color: #444;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    #glowSteps li:last-child { border-bottom: none; }
+    .glow { animation: glowAnim 1s infinite alternate; }
+    @keyframes glowAnim {
+      from { text-shadow: 0 0 8px var(--glow-color, orange); }
+      to   { text-shadow: 0 0 18px var(--glow-color, orange); }
+    }
+
+    .help-link { font-size: 0.9em; color: var(--cp-secondary); }
+    .help-link a { color: var(--cp-primary); text-decoration: none; }
+
+    /* Login form */
+    .voucher-input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 1em;
+      margin-bottom: 10px;
+      transition: border-color 0.2s;
+    }
+    .voucher-input:focus {
+      outline: none;
+      border-color: var(--cp-primary);
+    }
+
+    /* Buttons */
+    .btn-primary {
+      width: 100%;
+      padding: 13px;
+      background: var(--cp-primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn-primary:hover  { opacity: 0.9; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Packages */
+    .package-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .package-row:last-child { border-bottom: none; }
+    .package-row span { font-size: 0.95em; color: #333; }
+    .btn-buy {
+      padding: 8px 18px;
+      background: var(--cp-primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-buy:hover { opacity: 0.85; }
+
+    /* Footer */
+    .portal-footer {
+      text-align: center;
+      font-size: 0.8em;
+      color: #aaa;
+      margin-top: 8px;
+    }
+    .portal-footer span { color: var(--cp-primary); font-weight: 600; }
+
+    /* Modal */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.visible { display: flex; }
+    .modal-content {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px 24px;
+      width: 90%; max-width: 380px;
+      position: relative;
+    }
+    .modal-content h3 { font-size: 1.1em; margin-bottom: 16px; color: var(--cp-primary); }
+    .modal-content input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 1em;
+      margin-bottom: 12px;
+    }
+    .modal-content input:focus { outline: none; border-color: var(--cp-primary); }
+    .close {
+      position: absolute;
+      top: 14px; right: 18px;
+      font-size: 1.5em;
+      cursor: pointer;
+      color: #888;
+      line-height: 1;
+    }
+    .close:hover { color: #333; }
+    .modal-message {
+      margin-top: 12px;
+      font-size: 0.95em;
+      min-height: 20px;
+      line-height: 1.4;
     }
   </style>
 </head>
 <body>
 
-  <!-- Splash loading screen -->
+  <!-- ── Splash ── -->
   <div id="splash">
     <div class="spinner"></div>
-    <div class="loading-text">Loading Packages... ⏳</div>
+    <div class="loading-text">Loading packages... ⏳</div>
     <div class="progress-container">
       <div class="progress-bar" id="progressBar"></div>
     </div>
   </div>
 
-  <!-- Main page content -->
-  <div id="mainContent" class="container">
-    <h1>Kasangati Open WiFi</h1>
-    <div class="instructions">
-      <h2>How to Connect <span id="autoType" style="font-weight:bold;"></span></h2>
-      <div style="background: #f0f8ff; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 1.1em;">
-        ✅ <strong>Fast WiFi,Affordable,Easy Pay</strong> ✅
+  <!-- ── Main content ── -->
+  <div id="mainContent">
+    <div class="container">
+
+      <!-- Header -->
+      <div class="portal-header">
+        <img id="portalLogo" src="" alt="Logo" />
+        <h1 id="portalTitle">WiFi Login</h1>
       </div>
-      <ul id="glowSteps" style="list-style:none; padding-left:0;">
-        <li>🛒 Buy voucher at shop <b>or</b> pay with Mobile Money</li>
-        <li>📦 Pick your package</li>
-        <li>📱 Enter Your Number & Press Pay button</li>
-        <li>⏳ Wait for Wait seconds</li>
-        <li>📩 You'll be given  voucher code via SMS</li>
-        <li>🚀 Tap Connect button</li>
-      </ul>
-      <p class="help">📞 <a href="tel:0785151142">Need Help? 0785151142</a></p>
+
+      <!-- Banner -->
+      <div id="portalBanner">
+        <img id="portalBannerImg" src="" alt="Banner" />
+        <div id="portalBannerText">✅ Fast WiFi, Affordable, Easy Pay ✅</div>
+      </div>
+
+      <!-- Instructions -->
+      <div class="card">
+        <h2>How to Connect <span id="autoTypeWrap"><span id="autoType"></span></span></h2>
+        <ul id="glowSteps">
+          <li>🛒 Buy voucher at shop <b>or</b> pay with Mobile Money</li>
+          <li>📦 Pick your package</li>
+          <li>📱 Enter your number &amp; press Pay</li>
+          <li>⏳ Wait a few seconds</li>
+          <li>📩 You'll receive a voucher code via SMS</li>
+          <li>🚀 Tap Connect button</li>
+        </ul>
+        <p class="help-link" id="helpLine">📞 <a href="tel:0785151142">Need Help? 0785151142</a></p>
+      </div>
+
+      <!-- Login -->
+      <div class="card">
+        <h2>Login / Activate Package 🔑</h2>
+        <form id="loginForm" action="$(link-login-only)" method="post" onsubmit="return mikrotikDoChapLogin()">
+          <input type="hidden" name="dst" value="$(link-orig)" />
+          <input type="hidden" name="popup" value="true" />
+          <input name="username" type="hidden" />
+          <input id="voucherInput" name="password" type="text"
+                 class="voucher-input" placeholder="Enter voucher code" required />
+          <button type="submit" class="btn-primary">🚀 Connect</button>
+        </form>
+      </div>
+
+      <!-- Packages -->
+      <div class="card">
+        <h2>Buy A Package 💳</h2>
+        <div id="packageList">
+          <!-- Rendered by renderPackages() — default packages below as fallback -->
+        </div>
+      </div>
+
+      <div class="portal-footer">Powered by <span id="footerBrand">Madri'kDevInc</span></div>
     </div>
-    <style>
-      .glow {
-        animation: glow 1s infinite alternate;
-      }
-      @keyframes glow {
-        from { text-shadow: 0 0 10px var(--glow-color, orange), 0 0 20px var(--glow-color, orange); }
-        to { text-shadow: 0 0 20px var(--glow-color, orange), 0 0 40px var(--glow-color, orange); }
-      }
-    </style>
-    <script>
-      // Enhanced autotype effect for multiple messages with smooth transitions
-      document.addEventListener('DOMContentLoaded', function() {
-        // Autotype
-        const messages = [
-          '✅ Welcome User!',
-          '💳 Use Mobile Money',
-          '🛒 Buy Voucher',
-          '🚀 Connect & Enjoy WiFi!'
-        ];
-        const el = document.getElementById('autoType');
-        let msgIdx = 0;
-        let charIdx = 0;
-        function typeMessage() {
-          if (!el) return;
-          if (charIdx <= messages[msgIdx].length) {
-            el.textContent = messages[msgIdx].slice(0, charIdx);
-            charIdx++;
-            setTimeout(typeMessage, 70);
-          } else {
-            setTimeout(() => {
-              charIdx = 0;
-              msgIdx = (msgIdx + 1) % messages.length;
-              el.textContent = '';
-              setTimeout(typeMessage, 400);
-            }, 1200);
-          }
-        }
-        typeMessage();
-
-        // Glow steps effect
-        const colors = ['orange', 'green', 'blue'];
-        const steps = document.querySelectorAll('#glowSteps li');
-        let glowIdx = 0;
-        function glowStep() {
-          steps.forEach((li, i) => {
-            li.classList.remove('glow');
-            li.style.setProperty('--glow-color', '');
-          });
-          if (glowIdx < steps.length * colors.length) {
-            const step = Math.floor(glowIdx / colors.length);
-            const color = colors[glowIdx % colors.length];
-            steps[step].classList.add('glow');
-            steps[step].style.setProperty('--glow-color', color);
-            glowIdx++;
-            setTimeout(glowStep, 600);
-          } else {
-            steps.forEach(li => { li.classList.remove('glow'); li.style.setProperty('--glow-color', ''); });
-          }
-        }
-        glowStep();
-      });
-    </script>
-
-    <h2>Login / Activate Package 🔑</h2>
-    <form id="loginForm" action="$(link-login-only)" method="post" onsubmit="return mikrotikDoChapLogin()">
-      <input type="hidden" name="dst" value="$(link-orig)" />
-      <input type="hidden" name="popup" value="true" />
-      <input name="username" type="hidden" />
-      <input name="password" type="text" placeholder="Voucher" required />
-      <button type="submit" class="btn-primary">Connect</button>
-    </form>
-
-    <h2>Buy A Package 💳</h2>
-    <div class="packages">
-      <div class="package-row">
-        <span>2hrs UGX 500 💵</span>
-        <button class="btn-buy" onclick="showModal('2hrs UGX 500 💵', 500)">Buy</button>
-      </div>
-      <div class="package-row">
-        <span>24hrs UGX 1,000 💵</span>
-        <button class="btn-buy" onclick="showModal('Daily UGX 1,000 💵', 1000)">Buy</button>
-      </div>
-      <div class="package-row">
-        <span>2-Days UGX 2,000 💵</span>
-        <button class="btn-buy" onclick="showModal('2-Days UGX 2,000 💵', 2000)">Buy</button>
-      </div>
-      <div class="package-row">
-        <span>3-Days UGX 3,000 💵</span>
-        <button class="btn-buy" onclick="showModal('3-Days UGX 3,000 💵', 3000)">Buy</button>
-      </div>
-      <div class="package-row">
-        <span>Week UGX 5,000 💵</span>
-        <button class="btn-buy" onclick="showModal('Week UGX 5,000 💵', 5000)">Buy</button>
-      </div>
-    </div>
-
-    <b><footer>Powered by <span>Madri'kDevInc</span></footer></b>
   </div>
 
-  <!-- Payment Modal -->
-  <div id="paymentModal" class="modal hidden">
+  <!-- Payment modal -->
+  <div id="paymentModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeModal()">&times;</span>
       <h3 id="modalPackage">Selected Package</h3>
-      <input type="text" id="phoneInput" placeholder="Enter Mobile Money Number" />
+      <input type="tel" id="phoneInput" placeholder="e.g. 0759763795" />
       <button id="payBtn" class="btn-primary" onclick="pay()">Pay 💳</button>
       <div id="modalMessage" class="modal-message"></div>
     </div>
   </div>
 
+  <!-- Hidden MikroTik login form -->
   <form name="sendin" action="$(link-login-only)" method="post" style="display:none;">
     <input type="hidden" name="username" />
     <input type="hidden" name="password" />
@@ -208,422 +331,403 @@
   </form>
 
   <script>
-    function mikrotikDoChapLogin() {
-      const pass = document.querySelector('input[name="password"]').value;
-      if (!pass) {
-        alert('Please enter voucher code');
-        return false;
-      }
-      document.sendin.username.value = pass;
-      document.sendin.password.value = hexMD5('$(chap-id)' + pass + '$(chap-challenge)');
-      document.sendin.submit();
-      return false;
-    }
+  'use strict';
 
-    // ============ Captive portal customization (per router/admin) ============
-    async function applyCustomizationFromServer() {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const routerId = params.get('routerId');
+  // ─────────────────────────────────────────────
+  // CONFIG — injected by customization at runtime
+  // ─────────────────────────────────────────────
+  let TENANT_ID = '686ec0ba5af4c33113677684'; // fallback; overridden from server
+  let PAYMENT_URL = 'https://payment-engine-logic.onrender.com/collect';
+  let VOUCHER_STATUS_URL = 'https://payment-engine-logic.onrender.com/api/voucher/status';
 
-        if (!routerId) return; // no customization possible without routerId
+  // Default packages shown if server has none
+  const DEFAULT_PACKAGES = [
+    { label: '2hrs',   price: 'UGX 500',   amount: 500  },
+    { label: '24hrs',  price: 'UGX 1,000', amount: 1000 },
+    { label: '2-Days', price: 'UGX 2,000', amount: 2000 },
+    { label: '3-Days', price: 'UGX 3,000', amount: 3000 },
+    { label: 'Week',   price: 'UGX 5,000', amount: 5000 },
+  ];
 
-        // If admin passes a custom API base, use it. Otherwise fall back to this origin.
-        // Admin dashboard should inject either `apiBase` or rely on same-origin.
-        const apiBase = (params.get('apiBase') || '').replace(/\/$/, '');
-        const url = `${apiBase || ''}/api/captive-portal/public/${encodeURIComponent(routerId)}`;
-
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) return;
-        const settings = await res.json();
-
-        const portal = settings.captivePortal || {};
-        const branding = portal.branding || {};
-        const colors = portal.colors || {};
-        const fonts = portal.fonts || {};
-
-        // Apply CSS variables
-        document.documentElement.style.setProperty('--cp-primary', colors.primary || '#2563eb');
-        document.documentElement.style.setProperty('--cp-secondary', colors.secondary || '#64748b');
-        document.documentElement.style.setProperty('--cp-accent', colors.accent || '#f59e0b');
-        document.documentElement.style.setProperty('--cp-background', colors.background || '#ffffff');
-        document.documentElement.style.setProperty('--cp-heading-font', fonts.heading || 'Arial');
-        document.documentElement.style.setProperty('--cp-body-font', fonts.body || 'Arial');
-
-        // Update text content
-        const titleEl = document.querySelector('h1');
-        if (titleEl && branding.businessName) titleEl.textContent = branding.businessName;
-
-        const bannerMsg = document.querySelector('.instructions > div > strong');
-        if (bannerMsg && branding.bannerMessage) bannerMsg.textContent = branding.bannerMessage;
-
-        // Update banner area fallback (if strong not found)
-        const fallbackBanner = document.querySelector('.instructions > div');
-        if (fallbackBanner && branding.bannerMessage && !bannerMsg) {
-          fallbackBanner.textContent = `✅ ${branding.bannerMessage} ✅`;
-        }
-
-
-        // Update footer branding (keep powered-by label, allow optional override)
-        const footerSpan = document.querySelector('footer span');
-        if (footerSpan && branding.businessName) footerSpan.textContent = branding.businessName;
-
-        // Apply images
-        // Banner image (replace the existing box if we find a container)
-        const instructionsBox = document.querySelector('.instructions > div');
-        if (instructionsBox && branding.bannerImage) {
-          const img = document.createElement('img');
-          img.src = branding.bannerImage;
-          img.alt = 'Banner';
-          img.style.width = '100%';
-          img.style.borderRadius = '8px';
-          img.style.marginBottom = '10px';
-          instructionsBox.prepend(img);
-        }
-
-        // Logo (if there is a natural place - otherwise set document title icon only)
-        if (branding.logo) {
-          const link = document.querySelector('link[rel="icon"]') || document.createElement('link');
-          link.rel = 'icon';
-          link.type = 'image/png';
-          link.href = branding.logo;
-          if (!link.parentNode) document.head.appendChild(link);
-        }
-
-        // Update purchase instructions list (ul#glowSteps)
-        const ul = document.getElementById('glowSteps');
-        if (ul && Array.isArray(settings.purchaseInstructions)) {
-          ul.innerHTML = '';
-          settings.purchaseInstructions
-            .slice()
-            .sort((a, b) => (a.stepNumber || 0) - (b.stepNumber || 0))
-            .forEach((instr) => {
-              const li = document.createElement('li');
-              li.textContent = instr.instructionText || '';
-              ul.appendChild(li);
-            });
-          // re-run glow effect by toggling classes
-        }
-
-        // Apply colors to existing elements
-        const glowSteps = document.getElementById('glowSteps');
-        if (glowSteps) {
-          // ensure list uses accent for glow; original uses inline orange/green/blue, keep behavior
-          // but we can adjust strongly styled elements
-        }
-
-        const connectBtn = document.querySelector('.btn-primary');
-        if (connectBtn) {
-          connectBtn.style.backgroundColor = 'var(--cp-primary)';
-        }
-
-        const buyBtns = document.querySelectorAll('.btn-buy');
-        buyBtns.forEach((b) => {
-          b.style.backgroundColor = 'var(--cp-primary)';
-        });
-
-        document.body.style.background = 'linear-gradient(135deg, var(--cp-background), #cfcaca)';
-      } catch (e) {
-        // ignore customization errors to not break portal
-        console.warn('Captive portal customization failed:', e?.message || e);
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', applyCustomizationFromServer);
-
-    let progress = 0;
-
-    const progressBar = document.getElementById('progressBar');
-    const splash = document.getElementById('splash');
-    const mainContent = document.getElementById('mainContent');
-
-    const interval = setInterval(() => {
-      progress += Math.random() * 10 + 5;
-      if (progress > 100) progress = 100;
-      progressBar.style.width = progress + '%';
-      if (progress >= 100) {
-        clearInterval(interval);
-        splash.style.display = 'none';
-        mainContent.style.display = 'block';
-      }
-    }, 200);
-
-    let selectedPackage = '';
-    let selectedAmount = 0;
-
-    function showModal(name, amount) {
-      selectedPackage = name;
-      selectedAmount = amount;
-      document.getElementById('modalPackage').textContent = `Selected Package: ${name}`;
-      document.getElementById('phoneInput').value = '';
-      document.getElementById('modalMessage').textContent = '';
-      document.getElementById('paymentModal').classList.remove('hidden');
-      document.getElementById('payBtn').disabled = false; // enable Pay
-    }
-
-    function closeModal() {
-      document.getElementById('paymentModal').classList.add('hidden');
-    }
-async function pay() {
-  const phone = document.getElementById('phoneInput').value.trim();
-  const modalMessage = document.getElementById('modalMessage');
-  const payBtn = document.getElementById('payBtn');
-
-  if (!/^0\d{9}$/.test(phone)) {
-    alert('📱 Enter a valid Mobile Money number.');
-    return;
-  }
-
-  payBtn.disabled = true;
-  modalMessage.textContent = '⏳ Processing payment... Please approve on your phone.';
-  modalMessage.style.color = 'black';
-
-  try {
-    const res = await fetch('https://payment-engine-logic.onrender.com/collect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        phoneNumber: phone,
-        amount: selectedAmount
-      })
-    });
-
-    const data = await res.json();
-    console.log('💬 API Response:', data); // Debug
-
-    if (data.success && data.externalId) {
-      modalMessage.textContent = '✅ Payment initiated. Waiting for confirmation...';
-
-      // Start polling for voucher assignment
-      const voucher = await pollVoucher(data.externalId);
-
-      if (voucher && voucher.code) {
-        modalMessage.style.color = 'green';
-        modalMessage.textContent = `🎉 Payment successful! Voucher: ${voucher.code}`;
-
-        // ✅ Auto-fill username & password with voucher code and submit
-        if (document.sendin) {
-          document.sendin.username.value = voucher.code;
-          document.sendin.password.value = voucher.code;
-          document.sendin.submit();
-        }
-      } else {
-        modalMessage.style.color = 'orange';
-        modalMessage.textContent = '⚠️ Payment processed, but voucher not yet available. Please try again later.';
-        payBtn.disabled = false;
-      }
-    } else {
-      modalMessage.style.color = 'red';
-      modalMessage.textContent = data.message || '❌ Payment failed. Please try again.';
-      payBtn.disabled = false;
-    }
-  } catch (err) {
-    console.error('❌ Fetch error:', err);
-    modalMessage.style.color = 'red';
-    modalMessage.textContent = '❌ Network error. Check your connection and try again.';
-    payBtn.disabled = false;
-  }
-}
-
-// Poll backend for voucher assignment
-async function pay() {
-
-  const phone = document.getElementById('phoneInput').value.trim();
-  const modalMessage = document.getElementById('modalMessage');
-  const payBtn = document.getElementById('payBtn');
-
-async function pay() {
-  const phoneInput = document.getElementById('phoneInput');
-  const modalMessage = document.getElementById('modalMessage');
-  const payBtn = document.getElementById('payBtn');
-
-  // Normalize phone number: remove spaces, convert +256 prefix to 0
-  let phone = phoneInput.value.trim().replace(/\s+/g, '').replace(/^(\+256)/, '0');
-
-  if (!/^0\d{9}$/.test(phone)) {
-    alert('📱 Enter a valid Mobile Money number (e.g. 0759763795)');
-    return;
-  }
-
-  payBtn.disabled = true;
-  modalMessage.textContent = '⏳ Processing payment... Please approve on your phone.';
-  modalMessage.style.color = 'black';
-
-  try {
-    const res = await fetch('https://payment-engine-logic.onrender.com/collect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        phoneNumber: phone,
-        amount: selectedAmount,
-        tenantId: "686ec0ba5af4c33113677684" // <-- Hardcoded tenantId here
-      })
-    });
-
-    const data = await res.json();
-    console.log('💬 API Response:', data);
-
-    if (data.success && data.externalId) {
-      modalMessage.textContent = '✅ Payment initiated. Waiting for confirmation...';
-
-      const voucher = await listenForVoucher(data.externalId);
-
-      if (voucher && voucher.code) {
-        modalMessage.style.color = 'green';
-        modalMessage.textContent = `🎉 Payment successful! Voucher: ${voucher.code}`;
-
-        if (document.sendin) {
-          document.sendin.username.value = voucher.code;
-          document.sendin.password.value = voucher.code;
-          document.sendin.submit();
-        }
-      } else {
-        modalMessage.style.color = 'orange';
-        modalMessage.textContent = '⚠️ Payment processed, but voucher not yet available. Please try again later.';
-        payBtn.disabled = false;
-      }
-    } else {
-      modalMessage.style.color = 'red';
-      modalMessage.textContent = data.message || '❌ Payment failed. Please try again.';
-      payBtn.disabled = false;
-    }
-  } catch (err) {
-    console.error('❌ Fetch error:', err);
-    modalMessage.style.color = 'red';
-    modalMessage.textContent = '❌ Network error. Check your connection and try again.';
-    payBtn.disabled = false;
-  }
-}
-
-  payBtn.disabled = true;
-  modalMessage.textContent = '⏳ Processing payment... Please approve on your phone.';
-  modalMessage.style.color = 'black';
-
-  try {
-    const res = await fetch('https://payment-engine-logic.onrender.com/collect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        phoneNumber: phone,
-        amount: selectedAmount,
-        tenantId: "686ec0ba5af4c33113677684" // 🔥 Hardcoded tenant ID
-      })
-    });
-
-    const data = await res.json();
-    console.log('💬 API Response:', data); // Debug
-
-    if (data.success && data.externalId) {
-      modalMessage.textContent = '✅ Payment initiated. Waiting for confirmation...';
-      const voucher = await pollVoucher(data.externalId);
-
-      if (voucher && voucher.code) {
-        modalMessage.style.color = 'green';
-        modalMessage.textContent = `🎉 Payment successful! Voucher: ${voucher.code}`;
-        if (document.sendin) {
-          document.sendin.username.value = voucher.code;
-          document.sendin.password.value = voucher.code;
-          document.sendin.submit();
-        }
-      } else {
-        modalMessage.style.color = 'orange';
-        modalMessage.textContent = '⚠️ Payment processed, but voucher not yet available. Please try again later.';
-        payBtn.disabled = false;
-      }
-    } else {
-      modalMessage.style.color = 'red';
-      modalMessage.textContent = data.message || '❌ Payment failed. Please try again.';
-      payBtn.disabled = false;
-    }
-  } catch (err) {
-    console.error('❌ Fetch error:', err);
-    modalMessage.style.color = 'red';
-    modalMessage.textContent = '❌ Network error. Check your connection and try again.';
-    payBtn.disabled = false;
-  }
-}
-
-async function listenForVoucher(externalId, timeout = 180000) { // 3 min timeout
-  const modalMessage = document.getElementById('modalMessage');
-  return new Promise((resolve) => {
-    let resolved = false;
-
-    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = location.host;
-    const ws = new WebSocket(`${wsProtocol}//${wsHost}/?externalId=${externalId}`);
-
-    ws.onopen = () => {
-      console.log('🟢 WebSocket connected');
-      modalMessage.textContent = '📡 Waiting for confirmation from server...';
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log('📨 WebSocket message:', data);
-
-      if (data.type === 'voucherAssigned' && data.externalId === externalId) {
-        ws.close();
-        resolved = true;
-        resolve(data.voucher);
-      }
-    };
-
-    ws.onerror = (err) => {
-      console.error('🔴 WebSocket error:', err);
-      modalMessage.textContent = '⚠️ WebSocket error. Will fallback to polling...';
-    };
-
-    ws.onclose = () => {
-      if (!resolved) {
-        console.warn('🔌 WebSocket closed without voucher, fallback to polling');
-        resolve(pollVoucher(externalId, timeout));
-      }
-    };
-
-    // Timeout safeguard
-    setTimeout(() => {
-      if (!resolved) {
-        console.warn('⏱️ WebSocket timeout, fallback to polling');
-        ws.close();
-        resolve(pollVoucher(externalId, timeout));
-      }
-    }, timeout);
-  });
-}
-
-async function pollVoucher(externalId, timeout = 120000, interval = 5000) {
-  const modalMessage = document.getElementById('modalMessage');
-  let endTime = Date.now() + timeout;
-
-  const timer = setInterval(() => {
-    const remaining = Math.max(0, endTime - Date.now());
-    const minutes = Math.floor(remaining / 60000);
-    const seconds = Math.floor((remaining % 60000) / 1000);
-    modalMessage.textContent = `⏳ Waiting... ${minutes}:${seconds.toString().padStart(2, '0')} remaining`;
-  }, 1000);
-
-  while (Date.now() < endTime) {
+  // ─────────────────────────────────────────────
+  // CUSTOMIZATION — fetch from billing server
+  // ─────────────────────────────────────────────
+  async function applyCustomization() {
     try {
-      const res = await fetch(`https://payment-engine-logic.onrender.com/api/voucher/status?externalId=${externalId}`, {
-        cache: 'no-store'
+      const params  = new URLSearchParams(window.location.search);
+      const routerId = params.get('routerId');
+      if (!routerId) { renderPackages(DEFAULT_PACKAGES); return; }
+
+      // apiBase MUST be https — MikroTik hotspot runs over https
+      const apiBase = (params.get('apiBase') || 'https://billing-system-lhs5.onrender.com')
+                        .replace(/\/$/, '');
+
+      const url = `${apiBase}/api/captive-portal/public/${encodeURIComponent(routerId)}`;
+
+      const res = await fetch(url, {
+        cache: 'no-store',
+        // no credentials needed — public endpoint
       });
+
+      if (!res.ok) {
+        console.warn('[Portal] Customization fetch failed:', res.status);
+        renderPackages(DEFAULT_PACKAGES);
+        return;
+      }
+
       const data = await res.json();
 
-      if (data.success && data.voucher) {
-        clearInterval(timer);
-        return data.voucher;
+      const portal    = data.captivePortal || {};
+      const branding  = portal.branding    || {};
+      const colors    = portal.colors      || {};
+      const fonts     = portal.fonts       || {};
+      const packages  = portal.packages    || null;
+      const config    = portal.config      || {};
+
+      // ── CSS variables ──
+      if (colors.primary)    setCSSVar('--cp-primary',      colors.primary);
+      if (colors.secondary)  setCSSVar('--cp-secondary',    colors.secondary);
+      if (colors.accent)     setCSSVar('--cp-accent',       colors.accent);
+      if (colors.background) {
+        setCSSVar('--cp-background', colors.background);
+        document.body.style.background =
+          `linear-gradient(135deg, ${colors.background}, #c8c8c8)`;
       }
+      if (fonts.heading) setCSSVar('--cp-heading-font', fonts.heading);
+      if (fonts.body)    setCSSVar('--cp-body-font',    fonts.body);
+
+      // ── Text content ──
+      if (branding.businessName) {
+        setText('portalTitle', branding.businessName);
+        setText('footerBrand', branding.businessName);
+        document.title = branding.businessName;
+      }
+      if (branding.bannerMessage) {
+        setText('portalBannerText', `✅ ${branding.bannerMessage} ✅`);
+      }
+      if (branding.helpPhone) {
+        document.getElementById('helpLine').innerHTML =
+          `📞 <a href="tel:${branding.helpPhone}" style="color:var(--cp-primary)">Need Help? ${branding.helpPhone}</a>`;
+      }
+
+      // ── Images ──
+      if (branding.logo) {
+        const el = document.getElementById('portalLogo');
+        el.src = branding.logo; el.style.display = 'block';
+      }
+      if (branding.bannerImage) {
+        const el = document.getElementById('portalBannerImg');
+        el.src = branding.bannerImage; el.style.display = 'block';
+      }
+
+      // ── Instructions ──
+      if (Array.isArray(data.purchaseInstructions) && data.purchaseInstructions.length) {
+        const ul = document.getElementById('glowSteps');
+        ul.innerHTML = '';
+        [...data.purchaseInstructions]
+          .sort((a, b) => (a.stepNumber || 0) - (b.stepNumber || 0))
+          .forEach(i => {
+            const li = document.createElement('li');
+            li.textContent = i.instructionText;
+            ul.appendChild(li);
+          });
+      }
+
+      // ── Tenant / payment config (injected from server) ──
+      if (config.tenantId)       TENANT_ID       = config.tenantId;
+      if (config.paymentUrl)     PAYMENT_URL     = config.paymentUrl;
+      if (config.voucherStatusUrl) VOUCHER_STATUS_URL = config.voucherStatusUrl;
+
+      // ── Packages ──
+      renderPackages(packages || DEFAULT_PACKAGES);
+
     } catch (err) {
-      console.error('⚠️ Polling error:', err);
+      console.warn('[Portal] Customization error:', err.message || err);
+      renderPackages(DEFAULT_PACKAGES);
     }
-    await new Promise(r => setTimeout(r, interval));
   }
 
-  clearInterval(timer);
-  return null;
-}
+  function setCSSVar(name, value) {
+    document.documentElement.style.setProperty(name, value);
+  }
+  function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
 
-</script>
+  function renderPackages(list) {
+    const container = document.getElementById('packageList');
+    container.innerHTML = '';
+    list.forEach(pkg => {
+      const row = document.createElement('div');
+      row.className = 'package-row';
+      row.innerHTML = `
+        <span>${pkg.label} — ${pkg.price} 💵</span>
+        <button class="btn-buy"
+          onclick="showModal('${pkg.label} ${pkg.price}', ${pkg.amount})">
+          Buy
+        </button>`;
+      container.appendChild(row);
+    });
+  }
+
+  // ─────────────────────────────────────────────
+  // AUTOTYPE ANIMATION
+  // ─────────────────────────────────────────────
+  function startAutotype() {
+    const messages = [
+      '✅ Welcome!',
+      '💳 Use Mobile Money',
+      '🛒 Buy Voucher',
+      '🚀 Connect & Enjoy!'
+    ];
+    const el = document.getElementById('autoType');
+    let mIdx = 0, cIdx = 0;
+    function type() {
+      if (!el) return;
+      if (cIdx <= messages[mIdx].length) {
+        el.textContent = messages[mIdx].slice(0, cIdx++);
+        setTimeout(type, 70);
+      } else {
+        setTimeout(() => {
+          cIdx = 0;
+          mIdx = (mIdx + 1) % messages.length;
+          el.textContent = '';
+          setTimeout(type, 400);
+        }, 1200);
+      }
+    }
+    type();
+  }
+
+  function startGlowSteps() {
+    const colors = ['orange', 'green', 'blue'];
+    const steps  = document.querySelectorAll('#glowSteps li');
+    let idx = 0;
+    function glow() {
+      steps.forEach(li => { li.classList.remove('glow'); li.style.setProperty('--glow-color', ''); });
+      if (idx < steps.length * colors.length) {
+        const step  = Math.floor(idx / colors.length);
+        const color = colors[idx % colors.length];
+        if (steps[step]) {
+          steps[step].classList.add('glow');
+          steps[step].style.setProperty('--glow-color', color);
+        }
+        idx++;
+        setTimeout(glow, 600);
+      }
+    }
+    glow();
+  }
+
+  // ─────────────────────────────────────────────
+  // MIKROTIK CHAP LOGIN
+  // ─────────────────────────────────────────────
+  function mikrotikDoChapLogin() {
+    const pass = document.getElementById('voucherInput').value.trim();
+    if (!pass) { alert('Please enter your voucher code'); return false; }
+    document.sendin.username.value = pass;
+    // hexMD5 from /md5.js — required for CHAP auth
+    document.sendin.password.value = hexMD5('$(chap-id)' + pass + '$(chap-challenge)');
+    document.sendin.submit();
+    return false;
+  }
+
+  // ─────────────────────────────────────────────
+  // PAYMENT MODAL
+  // ─────────────────────────────────────────────
+  let selectedPackage = '';
+  let selectedAmount  = 0;
+
+  function showModal(name, amount) {
+    selectedPackage = name;
+    selectedAmount  = amount;
+    document.getElementById('modalPackage').textContent = `Package: ${name}`;
+    document.getElementById('phoneInput').value   = '';
+    document.getElementById('modalMessage').textContent = '';
+    document.getElementById('modalMessage').style.color = '';
+    document.getElementById('payBtn').disabled    = false;
+    document.getElementById('paymentModal').classList.add('visible');
+  }
+
+  function closeModal() {
+    document.getElementById('paymentModal').classList.remove('visible');
+  }
+
+  // ─────────────────────────────────────────────
+  // PAY — single clean version
+  // ─────────────────────────────────────────────
+  async function pay() {
+    const phoneInput   = document.getElementById('phoneInput');
+    const modalMessage = document.getElementById('modalMessage');
+    const payBtn       = document.getElementById('payBtn');
+
+    // Normalize: strip spaces, convert +256 → 0
+    let phone = phoneInput.value.trim()
+                  .replace(/\s+/g, '')
+                  .replace(/^\+256/, '0')
+                  .replace(/^256/, '0');
+
+    if (!/^0\d{9}$/.test(phone)) {
+      alert('📱 Enter a valid Mobile Money number (e.g. 0759763795)');
+      return;
+    }
+
+    payBtn.disabled = true;
+    setModalMsg('⏳ Processing payment... Please approve on your phone.', 'black');
+
+    try {
+      const res = await fetch(PAYMENT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: phone,
+          amount: selectedAmount,
+          tenantId: TENANT_ID,
+        }),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      if (data.success && data.externalId) {
+        setModalMsg('✅ Payment initiated. Waiting for confirmation...', 'black');
+
+        const voucher = await listenForVoucher(data.externalId);
+
+        if (voucher?.code) {
+          setModalMsg(`🎉 Payment successful! Voucher: ${voucher.code}`, 'green');
+          // Auto-login via hidden form
+          document.sendin.username.value = voucher.code;
+          document.sendin.password.value = voucher.code;
+          setTimeout(() => document.sendin.submit(), 1500);
+        } else {
+          setModalMsg('⚠️ Payment processed but voucher not yet ready. Please wait or try entering code manually.', 'orange');
+          payBtn.disabled = false;
+        }
+      } else {
+        setModalMsg(data.message || '❌ Payment failed. Please try again.', 'red');
+        payBtn.disabled = false;
+      }
+    } catch (err) {
+      console.error('[Pay] Error:', err);
+      setModalMsg('❌ Network error. Check your connection and try again.', 'red');
+      payBtn.disabled = false;
+    }
+  }
+
+  function setModalMsg(text, color) {
+    const el = document.getElementById('modalMessage');
+    el.textContent  = text;
+    el.style.color  = color;
+  }
+
+  // ─────────────────────────────────────────────
+  // WEBSOCKET + POLL — listen for voucher
+  // ─────────────────────────────────────────────
+  async function listenForVoucher(externalId, timeout = 180000) {
+    return new Promise((resolve) => {
+      let resolved = false;
+
+      // WebSocket must use wss:// (https pages block ws://)
+      const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsHost  = new URL(PAYMENT_URL).host; // point WS to payment server
+      let ws;
+
+      try {
+        ws = new WebSocket(`${wsProto}//${wsHost}/?externalId=${externalId}`);
+
+        ws.onopen = () => {
+          setModalMsg('📡 Waiting for payment confirmation...', 'black');
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'voucherAssigned' && msg.externalId === externalId) {
+              ws.close();
+              resolved = true;
+              resolve(msg.voucher);
+            }
+          } catch (_) {}
+        };
+
+        ws.onerror = () => {
+          setModalMsg('⚠️ Switching to polling...', '#888');
+        };
+
+        ws.onclose = () => {
+          if (!resolved) resolve(pollVoucher(externalId, timeout));
+        };
+      } catch (_) {
+        // WS unavailable — fall straight to polling
+        resolve(pollVoucher(externalId, timeout));
+        return;
+      }
+
+      // Hard timeout safeguard
+      setTimeout(() => {
+        if (!resolved) {
+          try { ws.close(); } catch (_) {}
+          resolve(pollVoucher(externalId, timeout));
+        }
+      }, timeout);
+    });
+  }
+
+  async function pollVoucher(externalId, timeout = 120000, interval = 5000) {
+    const end = Date.now() + timeout;
+
+    const timer = setInterval(() => {
+      const rem  = Math.max(0, end - Date.now());
+      const m    = Math.floor(rem / 60000);
+      const s    = Math.floor((rem % 60000) / 1000).toString().padStart(2, '0');
+      setModalMsg(`⏳ Waiting for confirmation... ${m}:${s}`, '#555');
+    }, 1000);
+
+    while (Date.now() < end) {
+      try {
+        const res  = await fetch(
+          `${VOUCHER_STATUS_URL}?externalId=${externalId}`,
+          { cache: 'no-store' }
+        );
+        const data = await res.json();
+        if (data.success && data.voucher) {
+          clearInterval(timer);
+          return data.voucher;
+        }
+      } catch (_) {}
+      await sleep(interval);
+    }
+
+    clearInterval(timer);
+    return null;
+  }
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  // ─────────────────────────────────────────────
+  // SPLASH PROGRESS + INIT
+  // ─────────────────────────────────────────────
+  let progress = 0;
+  const progressBar = document.getElementById('progressBar');
+
+  const splashInterval = setInterval(() => {
+    progress += Math.random() * 12 + 4;
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(splashInterval);
+      document.getElementById('splash').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
+      startAutotype();
+      startGlowSteps();
+    }
+    progressBar.style.width = progress + '%';
+  }, 180);
+
+  // Run customization fetch immediately (parallel with splash)
+  applyCustomization();
+
+  </script>
 </body>
 </html>
-
